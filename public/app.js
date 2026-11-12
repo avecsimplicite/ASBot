@@ -56,7 +56,7 @@ async function zoomContext() {
   if (typeof zoomSdk === "undefined") return null;
   try {
     await withTimeout(zoomSdk.config({
-      capabilities: ["getUserContext", "openUrl", "sendAppInvitationToAllParticipants"],
+      capabilities: ["getUserContext", "openUrl", "sendAppInvitationToAllParticipants", "sendMessageToChat"],
     }), 2500);
     const user = await withTimeout(zoomSdk.getUserContext(), 2500);
     return { sdk: zoomSdk, user };
@@ -78,6 +78,55 @@ function render(table, head, body, mine) {
   table.hidden = false;
 }
 
+// Envoie le texte dans le chat de la réunion ; sinon le copie (hors réunion, hors Zoom).
+async function sendOrCopy(item, zoomPromise, statusEl, previewEl) {
+  const zoom = await zoomPromise;
+  if (zoom) {
+    try {
+      await zoom.sdk.sendMessageToChat({ message: item.text });
+      statusEl.textContent = "Envoyé dans le chat : " + item.label;
+      return;
+    } catch { /* pas en réunion ou API non activée : on copie */ }
+  }
+  try {
+    await navigator.clipboard.writeText(item.text);
+    statusEl.textContent = "Copié : " + item.label + ". Colle-le dans le chat (Ctrl+V).";
+  } catch {
+    const range = document.createRange();
+    range.selectNodeContents(previewEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    statusEl.textContent = "Texte sélectionné : fais Ctrl+C, puis colle-le dans le chat.";
+  }
+}
+
+// Un bouton par message de public/messages.json.
+async function setupMessages(zoomPromise) {
+  const box = document.getElementById("messages");
+  const status = document.getElementById("sent");
+  try {
+    const res = await fetch("/messages.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    (await res.json()).forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "msg";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn";
+      btn.textContent = item.label;
+      const preview = document.createElement("p");
+      preview.className = "preview";
+      preview.textContent = item.text;
+      btn.addEventListener("click", () => sendOrCopy(item, zoomPromise, status, preview));
+      row.append(btn, preview);
+      box.appendChild(row);
+    });
+  } catch (e) {
+    status.textContent = "Messages indisponibles (" + e.message + ").";
+  }
+}
+
 async function main() {
   const $ = (id) => document.getElementById(id);
   $("today").textContent = new Date().toLocaleDateString("fr-CA", {
@@ -85,6 +134,7 @@ async function main() {
   });
 
   const zoomPromise = zoomContext();
+  setupMessages(zoomPromise);
 
   let head, body;
   try {

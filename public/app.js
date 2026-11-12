@@ -1,8 +1,9 @@
 // ASBot — affiche les postes du groupe (feuille Google « Posts mensuels » publiée en CSV).
 // Dans Zoom, met en évidence la ligne de la personne qui regarde.
 
-const SHEET_CSV =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnl8-YerEduI_wn45FLg36yEr2_na23Hrlk-txjYKuz5DxABxZcnuKxsNiqYNcMv3ulGEPveEKiAtP/pub?gid=665461249&single=true&output=csv";
+// Servie par functions/sheet.js sur le même domaine : le navigateur intégré
+// de Zoom n'a pas à joindre Google directement.
+const SHEET_CSV = "/sheet";
 
 // RFC 4180 : guillemets, virgules et retours de ligne dans les cellules.
 function parseCsv(text) {

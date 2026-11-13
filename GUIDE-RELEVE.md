@@ -70,6 +70,7 @@ groupe. Aucune contribution extérieure n'est nécessaire pour le faire vivre.
 | Hors réunion, un bouton **copie** le texte | Comportement prévu ; il suffit de coller (Ctrl+V) |
 | L'app ASBot est installée sur le compte Zoom du groupe | Visible dans **Apps → My apps** de Zoom de bureau |
 | Le bouton **Partager ASBot** choisit le bon mode | Testé dans un navigateur avec un faux SDK Zoom : invitation en réunion, copie si Zoom refuse, copie dans la fenêtre principale ou hors Zoom |
+| L'option **Mobile** est activée dans l'app Zoom (Android) | Réglage relu après rechargement et manifeste re-téléchargé le 12 novembre 2026 (section 7). Pas encore essayé sur un vrai téléphone |
 
 ### Ce qui n'est pas encore fait ou pas encore vérifié
 
@@ -81,8 +82,9 @@ groupe. Aucune contribution extérieure n'est nécessaire pour le faire vivre.
   qui permet aux autres comptes d'ouvrir ASBot n'ont pas été testés avec de vrais participants.
   On ne sait pas encore si Zoom accepte l'invitation quand elle vient d'un simple participant ;
   si Zoom la refuse, **Partager ASBot** copie le lien à la place.
-- **Téléphones** : l'option *Mobile* n'est pas activée dans l'app Zoom. Pour iPhone/iPad,
-  Zoom demande en plus un identifiant d'équipe Apple Developer, que le groupe n'a pas.
+- **Téléphones** : *Mobile* est activé pour **Android** depuis le 12 novembre 2026, mais personne
+  ne l'a encore essayé sur un téléphone dans une réunion. **iPhone/iPad : pas encore** ; Zoom
+  demande un identifiant d'équipe Apple Developer, que le groupe n'a pas (section 10).
 - **Publication sur le Zoom Marketplace** : l'app est en *brouillon* (Draft), installée seulement
   sur le compte Zoom du groupe par le mode « Local test ». Elle n'est pas publiée.
 
@@ -507,7 +509,7 @@ ASBot sur le Marketplace.
 | Features → Surface | Domain allow list | `asbot.pages.dev`, `appssdk.zoom.us`, `docs.google.com`, `googleusercontent.com`, `sites.google.com` |
 | Features → Surface | Zoom App SDK | **activé**, 4 APIs : `getUserContext`, `openUrl`, `sendAppInvitationToAllParticipants`, `sendMessageToChat` |
 | Features → Surface | Guest mode | **activé**, avec *Ability to test guest mode* coché |
-| Features → Surface | Mobile | désactivé (pas encore fait) |
+| Features → Surface | Mobile | **activé** (Android), case de certification « in-app purchase » cochée ; identifiant Apple vide, donc pas d'iPhone/iPad. Activé par le manifeste le 12 novembre 2026 (voir plus bas) |
 | Scopes | Scope | **`zoomapp:inmeeting`** (« Enable Zoom App within Zoom Meeting Client ») |
 | Local test | Installation | Ajoutée au compte Zoom du groupe (*Remove App* visible) |
 
@@ -531,6 +533,28 @@ n'empêchent pas l'app de fonctionner pour le groupe.
 « N Selected » augmente. Recharger la page pour vérifier que c'est enregistré. Dans Zoom, faire
 **… → Refresh app**. Si Zoom refuse encore la fonction, réinstaller : **Local test → Remove App**,
 puis **Add app now** → **Allow**.
+
+### Modifier un réglage par le manifeste (et revenir en arrière)
+
+Certains réglages ne s'enregistrent pas depuis les pages. Le 12 novembre 2026, l'interrupteur
+**Mobile** ne restait jamais activé : la page n'envoyait aucune sauvegarde tant que le champ
+*Apple developer program team ID* était vide, même pour Android seulement. La solution a été le
+**manifeste**, le fichier JSON qui décrit toute la configuration de l'app.
+
+1. **Manifest file** (en haut de la page de l'app) → icône de téléchargement : on obtient le
+   manifeste actuel. **Garder une copie intacte** : c'est la sauvegarde pour revenir en arrière.
+2. Dans une copie, ne changer que ce qu'il faut. Pour Mobile, c'était uniquement
+   `features.zoom_client_support.mobile.enable` : `false` → `true`.
+3. **Manifest file** → choisir le fichier modifié dans *Manifest upload*. **Zoom l'applique dès
+   que le fichier est choisi**, sans autre bouton, et **remplace toute la configuration** de l'app
+   (« Once uploaded, this action cannot be undone »).
+4. Vérifier : recharger les pages de réglages, puis re-télécharger le manifeste et le comparer
+   avec la sauvegarde. Le 12 novembre, la seule différence était le bloc `mobile`. Zoom y avait
+   ajouté de lui-même `"apple_developer_program_team_id": ""` (vide).
+5. **Pour revenir en arrière** : téléverser la sauvegarde de la même façon.
+
+Les manifestes de ce changement (original, modifié, et celui relu après l'envoi) sont gardés sur
+Eury dans `/home/gmusic/salix/production/asbot-manifest-backups/`. Ils ne contiennent aucun secret.
 
 ### L'impasse à éviter : l'ancienne app ASBot de 2022
 
@@ -646,6 +670,7 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
 | L'app Zoom qui sert | Marketplace → Created apps → ASBot (*User Managed*), ID `LWZN1ZQuS6Ga8cB5D0ARkA` |
 | La mémoire de projet de Claude sur Eury | `/home/gmusic/.claude/projects/-home-gmusic/memory/project_asbot_zoom_panel.md` (notes de l'assistant ; ce guide fait foi pour le groupe) |
 | Le jeton GitHub du compte du groupe pour Claude | `/a/src/.mcp.github.as.json` sur Eury (ne jamais le copier ailleurs ni l'afficher) |
+| Les sauvegardes du manifeste de l'app Zoom | `/home/gmusic/salix/production/asbot-manifest-backups/` sur Eury (section 7) |
 
 ---
 
@@ -655,7 +680,14 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
       faire **Ouvrir pour tout le monde** et vérifier qu'un participant d'un autre compte peut
       ouvrir ASBot ; faire **Partager ASBot** depuis le poste d'un simple participant et noter si
       Zoom envoie l'invitation ou si le bouton copie le lien.
-- [ ] **Activer Mobile** (Android d'abord ; iPhone/iPad demande un identifiant Apple Developer).
+- [x] **Activer Mobile pour Android** — fait le 12 novembre 2026. Décision de Gerico : la case de
+      certification « in-app purchase » est cochée telle quelle, et le bouton **7e Tradition** est
+      gardé tel quel. Activé **par le manifeste** (section 7), parce que la page de réglages
+      n'enregistrait pas Mobile tant que le champ de l'identifiant Apple était vide.
+- [ ] **Essayer ASBot sur un téléphone Android** dans une vraie réunion.
+- [ ] **iPhone/iPad** (décision « D6 » de Gerico, encore ouverte) : il faut un identifiant d'équipe
+      Apple Developer. Le programme Apple Developer est payant (environ 119 $ CA par an) ; une
+      exemption des frais existe pour les organismes sans but lucratif admissibles.
 - [ ] **Ancienne app ASBot 2022** : régénérer son *client secret* de développement (il est apparu
       dans le journal d'une session de travail le 12 novembre 2026), puis décider en groupe si on
       la supprime.
@@ -676,4 +708,5 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
 | `34221a8` | 12 nov. 2026 | Relais `/sheet` (le navigateur de Zoom bloquait Google) |
 | `1dce646` | 12 nov. 2026 | Quatre boutons de messages pour le chat (`messages.json`) |
 | `17bc065` | 12 nov. 2026 | Ce guide de relève |
-| (ce commit) | 12 nov. 2026 | Bouton **Partager ASBot** (invitation en réunion, sinon copie du lien) |
+| `627a72e` | 12 nov. 2026 | Bouton **Partager ASBot** (invitation en réunion, sinon copie du lien) |
+| (ce commit) | 12 nov. 2026 | Guide : Mobile activé pour Android par le manifeste ; marche à suivre et retour arrière |

@@ -16,7 +16,8 @@ jamais par ce fichier, le chat ou un courriel.
 - **ASBot** est un panneau qui s'ouvre dans Zoom, à côté de la vidéo. Il montre la liste des
   postes de service du groupe (qui fait l'accueil, l'animation, l'affichage…) et quatre boutons
   qui publient dans le chat de la réunion les messages qu'on colle à chaque réunion
-  (première étape, 7e Tradition, serviteur à l'affichage, serviteur à l'animation).
+  (première étape, 7e Tradition, serviteur à l'affichage, serviteur à l'animation), plus un
+  bouton **Partager ASBot** que n'importe quel membre peut utiliser pour le faire ouvrir aux autres.
 - La page vit à **https://asbot.pages.dev**. Elle est publiée automatiquement par Cloudflare
   Pages à chaque changement poussé sur la branche `main` du dépôt GitHub
   **avecsimplicite/ASBot**.
@@ -68,6 +69,7 @@ groupe. Aucune contribution extérieure n'est nécessaire pour le faire vivre.
 | Les quatre boutons de messages s'affichent | Rendu dans Chrome et dans Zoom |
 | Hors réunion, un bouton **copie** le texte | Comportement prévu ; il suffit de coller (Ctrl+V) |
 | L'app ASBot est installée sur le compte Zoom du groupe | Visible dans **Apps → My apps** de Zoom de bureau |
+| Le bouton **Partager ASBot** choisit le bon mode | Testé dans un navigateur avec un faux SDK Zoom : invitation en réunion, copie si Zoom refuse, copie dans la fenêtre principale ou hors Zoom |
 
 ### Ce qui n'est pas encore fait ou pas encore vérifié
 
@@ -75,8 +77,10 @@ groupe. Aucune contribution extérieure n'est nécessaire pour le faire vivre.
   et l'autorisation est activée dans Zoom, mais personne ne l'a encore essayé dans une réunion
   (il faut Windows ou macOS, voir plus bas).
 - **Réunion avec plusieurs participants** : le bouton **Ouvrir pour tout le monde** (visible pour
-  l'hôte et les co-hôtes) et le « mode invité » qui permet aux autres comptes d'ouvrir ASBot
-  n'ont pas été testés avec de vrais participants.
+  l'hôte et les co-hôtes), le bouton **Partager ASBot** (visible pour tous) et le « mode invité »
+  qui permet aux autres comptes d'ouvrir ASBot n'ont pas été testés avec de vrais participants.
+  On ne sait pas encore si Zoom accepte l'invitation quand elle vient d'un simple participant ;
+  si Zoom la refuse, **Partager ASBot** copie le lien à la place.
 - **Téléphones** : l'option *Mobile* n'est pas activée dans l'app Zoom. Pour iPhone/iPad,
   Zoom demande en plus un identifiant d'équipe Apple Developer, que le groupe n'a pas.
 - **Publication sur le Zoom Marketplace** : l'app est en *brouillon* (Draft), installée seulement
@@ -149,6 +153,13 @@ ASBot/
   - il crée un bouton par entrée de `messages.json`. Dans une réunion, le bouton publie le texte
     dans le chat (`sendMessageToChat`). Ailleurs, il le copie dans le presse-papiers, et si la
     copie est refusée, il sélectionne le texte pour un Ctrl+C manuel ;
+  - le bouton **Partager ASBot** (fonction `shareApp`, sous les boutons de messages) sert à
+    tous les membres, pas seulement à l'hôte. Dans une réunion, il demande à Zoom d'inviter tous
+    les participants à ouvrir ASBot (`sendAppInvitationToAllParticipants`). Dans la fenêtre
+    principale de Zoom (le cas de Linux), dans un navigateur, ou si Zoom refuse l'invitation, il
+    copie à la place un court texte avec le lien https://asbot.pages.dev, à coller dans le chat.
+    Pour savoir où il tourne, il lit ce que Zoom indique au démarrage (`runningContext`, par exemple
+    `inMeeting` ou `inMainClient`) ;
   - les liens du bas s'ouvrent dans le navigateur de l'ordinateur (`openUrl`), parce que le
     navigateur intégré de Zoom refuse les sites qui ne sont pas dans sa liste.
 - Les fonctions Zoom que la page a le droit d'utiliser sont listées à **deux endroits** qui
@@ -273,6 +284,10 @@ nano public/messages.json                  # ou n'importe quel éditeur
 python3 -m json.tool public/messages.json > /dev/null && echo "JSON valide"
 ```
 
+Le texte que copie le bouton **Partager ASBot** n'est pas dans ce fichier : c'est la constante
+`SHARE_TEXT`, en haut de `public/app.js`. Le nom du bouton est dans `public/index.html`
+(`<button id="share" …>Partager ASBot</button>`).
+
 Si la commande `python3 -m json.tool` affiche une erreur, il manque une virgule, une accolade ou
 un guillemet : corrige avant de publier. Une erreur dans ce fichier fait disparaître **tous** les
 boutons (la page affiche alors « Messages indisponibles »). Le tableau des postes, lui, continue
@@ -338,6 +353,11 @@ documentation du SDK : https://appssdk.zoom.us/classes/ZoomSdk.ZoomSdk.html . Da
 ci-dessus, `getMeetingJoinUrl` existe bien dans le SDK, mais le nom du champ renvoyé (`joinUrl`)
 est à confirmer dans cette documentation avant de publier. La liste **Add APIs** de la section 7
 donne aussi une description courte de chaque fonction.
+
+Le bouton **Partager ASBot** est un exemple réel de ce modèle, déjà en place : son bouton est dans
+`public/index.html` (bloc `<div class="msg">` sous `<div id="messages">`), et son comportement dans
+`public/app.js` (fonctions `shareApp` et `copyText`, branchées dans `main()`). La fonction Zoom qu'il
+utilise, `sendAppInvitationToAllParticipants`, était déjà autorisée : aucun réglage Zoom n'a changé.
 
 Pour l'apparence, ajouter une classe dans `public/style.css`. Les couleurs sont définies une seule
 fois en haut du fichier (`--accent`, `--card`, etc.), avec une version pour le mode sombre ;
@@ -633,7 +653,8 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
 
 - [ ] **Tester dans une vraie réunion depuis Windows ou macOS** : publier un message avec un bouton ;
       faire **Ouvrir pour tout le monde** et vérifier qu'un participant d'un autre compte peut
-      ouvrir ASBot.
+      ouvrir ASBot ; faire **Partager ASBot** depuis le poste d'un simple participant et noter si
+      Zoom envoie l'invitation ou si le bouton copie le lien.
 - [ ] **Activer Mobile** (Android d'abord ; iPhone/iPad demande un identifiant Apple Developer).
 - [ ] **Ancienne app ASBot 2022** : régénérer son *client secret* de développement (il est apparu
       dans le journal d'une session de travail le 12 novembre 2026), puis décider en groupe si on
@@ -654,4 +675,5 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
 | `7f86c13` | 12 nov. 2026 | Première page : tableau des postes, en-têtes de sécurité, page d'installation |
 | `34221a8` | 12 nov. 2026 | Relais `/sheet` (le navigateur de Zoom bloquait Google) |
 | `1dce646` | 12 nov. 2026 | Quatre boutons de messages pour le chat (`messages.json`) |
-| (ce commit) | 12 nov. 2026 | Ce guide de relève |
+| `17bc065` | 12 nov. 2026 | Ce guide de relève |
+| (ce commit) | 12 nov. 2026 | Bouton **Partager ASBot** (invitation en réunion, sinon copie du lien) |

@@ -51,15 +51,19 @@ async function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 }
 
-// Renvoie { sdk, user } dans Zoom, sinon null.
+// Texte copié par « Partager ASBot » quand l'invitation Zoom n'est pas possible.
+const SHARE_TEXT = "ASBot — les postes du groupe et les messages pour le chat : https://asbot.pages.dev";
+
+// Renvoie { sdk, user, where } dans Zoom, sinon null.
+// where = endroit où Zoom dit que l'app tourne (ex. "inMeeting", "inMainClient"), s'il le dit.
 async function zoomContext() {
   if (typeof zoomSdk === "undefined") return null;
   try {
-    await withTimeout(zoomSdk.config({
+    const cfg = await withTimeout(zoomSdk.config({
       capabilities: ["getUserContext", "openUrl", "sendAppInvitationToAllParticipants", "sendMessageToChat"],
     }), 2500);
     const user = await withTimeout(zoomSdk.getUserContext(), 2500);
-    return { sdk: zoomSdk, user };
+    return { sdk: zoomSdk, user, where: cfg && cfg.runningContext };
   } catch {
     return null;
   }
@@ -88,9 +92,14 @@ async function sendOrCopy(item, zoomPromise, statusEl, previewEl) {
       return;
     } catch { /* pas en réunion ou API non activée : on copie */ }
   }
+  await copyText(item.text, item.label, statusEl, previewEl);
+}
+
+// Copie le texte ; si la copie est refusée, le sélectionne pour un Ctrl+C manuel.
+async function copyText(text, label, statusEl, previewEl) {
   try {
-    await navigator.clipboard.writeText(item.text);
-    statusEl.textContent = "Copié : " + item.label + ". Colle-le dans le chat (Ctrl+V).";
+    await navigator.clipboard.writeText(text);
+    statusEl.textContent = "Copié : " + label + ". Colle-le dans le chat (Ctrl+V).";
   } catch {
     const range = document.createRange();
     range.selectNodeContents(previewEl);
@@ -99,6 +108,20 @@ async function sendOrCopy(item, zoomPromise, statusEl, previewEl) {
     sel.addRange(range);
     statusEl.textContent = "Texte sélectionné : fais Ctrl+C, puis colle-le dans le chat.";
   }
+}
+
+// « Partager ASBot », pour tout membre : dans une réunion, Zoom invite tous les participants
+// à ouvrir ASBot ; ailleurs (Linux, navigateur, ou si Zoom refuse) on copie SHARE_TEXT.
+async function shareApp(zoomPromise, statusEl, previewEl) {
+  const zoom = await zoomPromise;
+  if (zoom && zoom.where !== "inMainClient") {
+    try {
+      await zoom.sdk.sendAppInvitationToAllParticipants();
+      statusEl.textContent = "Invitation ASBot envoyée à tous les participants.";
+      return;
+    } catch { /* pas en réunion, client sans invitation, ou refus de Zoom : on copie */ }
+  }
+  await copyText(SHARE_TEXT, "Partager ASBot", statusEl, previewEl);
 }
 
 // Un bouton par message de public/messages.json.
@@ -135,6 +158,8 @@ async function main() {
 
   const zoomPromise = zoomContext();
   setupMessages(zoomPromise);
+  $("share-text").textContent = SHARE_TEXT;
+  $("share").addEventListener("click", () => shareApp(zoomPromise, $("sent"), $("share-text")));
 
   let head, body;
   try {

@@ -82,6 +82,11 @@ groupe. Aucune contribution extérieure n'est nécessaire pour le faire vivre.
   qui permet aux autres comptes d'ouvrir ASBot n'ont pas été testés avec de vrais participants.
   On ne sait pas encore si Zoom accepte l'invitation quand elle vient d'un simple participant ;
   si Zoom la refuse, **Partager ASBot** copie le lien à la place.
+- **Mode invité (participants d'autres comptes Zoom)** : fin novembre 2026, deux membres ont vu en
+  réunion « *You are not allowed to use this Zoom App in guest mode. Please enable guest mode
+  testing in the local environment.* » Tant qu'ASBot n'est **pas publié**, Zoom exige un réglage
+  **sur l'ordinateur de chaque participant** (section 8.5). Le réglage du Marketplace, lui, est déjà
+  en place.
 - **Téléphones** : *Mobile* est activé pour **Android** depuis le 12 novembre 2026, mais personne
   ne l'a encore essayé sur un téléphone dans une réunion. **iPhone/iPad : pas encore** ; Zoom
   demande un identifiant d'équipe Apple Developer, que le groupe n'a pas (section 10).
@@ -508,7 +513,7 @@ ASBot sur le Marketplace.
 | Features → Surface | Home URL | `https://asbot.pages.dev/` |
 | Features → Surface | Domain allow list | `asbot.pages.dev`, `appssdk.zoom.us`, `docs.google.com`, `googleusercontent.com`, `sites.google.com` |
 | Features → Surface | Zoom App SDK | **activé**, 4 APIs : `getUserContext`, `openUrl`, `sendAppInvitationToAllParticipants`, `sendMessageToChat` |
-| Features → Surface | Guest mode | **activé**, avec *Ability to test guest mode* coché |
+| Features → Surface | Guest mode | **activé**, avec *Ability to test guest mode* coché (revérifié le 25 novembre 2026). Tant que l'app n'est pas publiée, chaque participant invité doit aussi activer le test du mode invité sur son ordinateur (section 8.5) |
 | Features → Surface | Mobile | **activé** (Android), case de certification « in-app purchase » cochée ; identifiant Apple vide, donc pas d'iPhone/iPad. Activé par le manifeste le 12 novembre 2026 (voir plus bas) |
 | Scopes | Scope | **`zoomapp:inmeeting`** (« Enable Zoom App within Zoom Meeting Client ») |
 | Local test | Installation | Ajoutée au compte Zoom du groupe (*Remove App* visible) |
@@ -653,6 +658,53 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
   Zoom, et on ne peut pas les y ajouter. (Le brouillon d'app d'avril 2026 pointait vers
   `avecsimplicite.github.io/naas/minimal` ; c'est ce brouillon qui est devenu l'ASBot actuel.)
 
+### 8.5 Erreur « You are not allowed to use this Zoom App in guest mode »
+
+Message complet vu en réunion : « *You are not allowed to use this Zoom App in guest mode. Please
+enable guest mode testing in the local environment. Contact app developer for more details.* »
+
+**Pourquoi.** Le membre ouvre ASBot en *mode invité* : il n'est pas connecté au compte Zoom du
+groupe et n'a pas ajouté l'app. ASBot n'étant **pas publié** sur le Marketplace, Zoom demande deux
+réglages. Le premier est dans le Marketplace (*Guest mode* et *Ability to test guest mode*), et il
+est déjà en place (section 7). Le second est sur **l'ordinateur de chaque participant**. Le guide
+de Zoom le dit ainsi : « *You must enable Guest Mode Testing for each testing device.* »
+
+**Ce que chaque participant fait une fois, sur son ordinateur :**
+
+- **Windows** : touches **Windows + R**, taper `%appdata%\Zoom\data`, **Entrée**. Ouvrir le
+  fichier `Zoom.us.ini` avec le Bloc-notes et ajouter ces deux lignes (si une ligne `[ZoomChat]`
+  existe déjà, ajouter seulement la deuxième juste en dessous) :
+
+  ```ini
+  [ZoomChat]
+  enableGuestModeTesting=true
+  ```
+
+  Enregistrer, quitter Zoom complètement (clic droit sur l'icône Zoom près de l'horloge →
+  *Quitter*), puis le rouvrir.
+- **macOS** : ouvrir l'app **Terminal**, coller cette ligne puis **Entrée** :
+
+  ```bash
+  defaults write ZoomChat enableGuestModeTesting true
+  ```
+
+  Quitter Zoom (**Cmd+Q**), puis le rouvrir.
+- **Pour annuler** : la même chose avec `false` au lieu de `true`.
+- **Linux, Android, iPhone/iPad** : Zoom ne documente aucun réglage local. Sur Linux, de toute
+  façon, Zoom n'affiche pas les apps dans la fenêtre de réunion (section 2).
+
+Le guide de Zoom ne dit pas s'il faut redémarrer Zoom ; on le fait par précaution. En mode invité,
+un participant ne peut ouvrir ASBot que s'il **reçoit une invitation** d'une personne qui a l'app
+(**Ouvrir pour tout le monde** ou **Partager ASBot**).
+
+**La solution durable** est de publier ASBot sur le Marketplace (relecture par Zoom). Une fois
+publié, ce réglage local ne devrait plus être nécessaire, mais le guide de Zoom ne le dit pas
+explicitement. C'est une décision à prendre en groupe (section 10).
+
+Sources : guide « Guest Mode » de Zoom
+(https://developers.zoom.us/docs/zoom-apps/guides/guest-mode/) et le fil
+https://devforum.zoom.us/t/guest-mode-error-in-unpublished-app/77031 .
+
 ---
 
 ## 9. Où se trouvent les choses
@@ -684,7 +736,15 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
       certification « in-app purchase » est cochée telle quelle, et le bouton **7e Tradition** est
       gardé tel quel. Activé **par le manifeste** (section 7), parce que la page de réglages
       n'enregistrait pas Mobile tant que le champ de l'identifiant Apple était vide.
-- [ ] **Essayer ASBot sur un téléphone Android** dans une vraie réunion.
+- [ ] **Essayer ASBot sur un téléphone Android** dans une vraie réunion. Attention : un membre qui
+      n'est pas sur le compte du groupe y ouvre ASBot en mode invité, et Zoom ne documente pas de
+      réglage local sur téléphone (section 8.5).
+- [ ] **Mode invité** : aider les membres qui utilisent ASBot depuis un autre compte Zoom à faire
+      le réglage local de la section 8.5 (Windows ou macOS), puis vérifier en réunion que l'erreur
+      a disparu.
+- [ ] **Publier ASBot sur le Zoom Marketplace ?** C'est la seule voie pour que le mode invité marche
+      sans réglage sur chaque appareil, téléphones compris. Il faut une relecture par Zoom (domaines,
+      politique de confidentialité, conditions d'utilisation). Décision à prendre en groupe.
 - [ ] **iPhone/iPad** (décision « D6 » de Gerico, encore ouverte) : il faut un identifiant d'équipe
       Apple Developer. Le programme Apple Developer est payant (environ 119 $ CA par an) ; une
       exemption des frais existe pour les organismes sans but lucratif admissibles.
@@ -709,4 +769,5 @@ en dehors du panneau, à sa droite. Les autres choix sont *Open In New Window* e
 | `1dce646` | 12 nov. 2026 | Quatre boutons de messages pour le chat (`messages.json`) |
 | `17bc065` | 12 nov. 2026 | Ce guide de relève |
 | `627a72e` | 12 nov. 2026 | Bouton **Partager ASBot** (invitation en réunion, sinon copie du lien) |
-| (ce commit) | 12 nov. 2026 | Guide : Mobile activé pour Android par le manifeste ; marche à suivre et retour arrière |
+| `24f53e1` | 12 nov. 2026 | Guide : Mobile activé pour Android par le manifeste ; marche à suivre et retour arrière |
+| (ce commit) | 25 nov. 2026 | Guide : erreur du mode invité, réglage local par appareil (section 8.5) |
